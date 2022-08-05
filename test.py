@@ -1,6 +1,7 @@
 
 
 import torch
+from yaml import load
 from src.backbone.feature_extractor import deepFeatureExtractor_EfficientNet
 from src.neck.FPN import FPN, Up
 from src.head.det.ObjectBox import Model, C3, Conv
@@ -13,18 +14,40 @@ from  src.vTrans.FCTransform import Row_block, FCTransform
 from src.head import Detect
 
 from src.loss.ObjectCenter import ComputeLoss
+from src.dataset.HM_object import ObjectDataset
+from torch.utils.data import DataLoader
 
-model = torch.nn.Linear(2,3)
-loss = ComputeLoss(model)
+# --------------------------------------
+dataset = ObjectDataset('/root/tools/card/object.mini.txt')
+loader  = DataLoader(dataset=dataset, batch_size=10, collate_fn=dataset.collate_fn)
+for i, batch in enumerate(loader):
+    for k,v in batch.items():
+        print(k)
+        print(v.shape)
+        if k=='object':
+            print(v)
+    exit()
+# print(len(dataset))
+# res = dataset[0]
+# print(res['object'])
 
-
-pre = [torch.randn(3,1,30,30,5+10) for _ in range(2)]
-target = torch.randn(3,6)
-target[:,1] = 1
-target[:,0] = 1
-ls,_ = loss(pre, target)
-print(ls)
+for i in range(4):
+    print(i)
 exit()
+
+# ---------------------------------------
+# model = torch.nn.Linear(2,3)
+# loss = ComputeLoss(model)
+
+
+# pre = [torch.randn(3,1,30,30,5+10) for _ in range(2)]
+# target = torch.randn(3,6)
+# target[:,1] = 1
+# target[:,0] = 1
+# ls, oo= loss(pre, target)
+# print(ls)
+# print(oo)
+# exit()
 
 # ------------------------------------
 

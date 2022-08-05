@@ -8,9 +8,9 @@ from src.utils import is_parallel, xywh2xyxy
 
 class ComputeLoss:
     # Compute losses
-    def __init__(self, model, autobalance=False, nl=2, na=1, nc=10):
+    def __init__(self,  autobalance=False, nl=2, na=1, nc=10):
         self.sort_obj_iou = False
-        device = next(model.parameters()).device  # get model device
+        # device = next(model.parameters()).device  # get model device
         # h = model.hyp  # hyperparameters
         h = dict(
             obj_pw = 1.0,
@@ -109,7 +109,7 @@ class ComputeLoss:
         
         gain = torch.ones(7, device=targets.device)  # normalized to gridspace gain
         ai = torch.arange(num_nobox, device=targets.device).float().view(num_nobox, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
-        targets_b = torch.cat((targets.repeat(num_nobox, 1, 1), ai[:, :, None]), 2)  # 
+        targets_b = torch.cat((targets.repeat(num_nobox, 1, 1), ai[:, :, None]), 2)  # 1 num 6   1 1 1 -> 1 num 7
 
         g = 0.5
         off = torch.tensor([[0, 0],
@@ -143,25 +143,25 @@ class ComputeLoss:
             obj_i = (allwidth >= th1)
 
             gain[2:6] = torch.tensor(p[i].shape)[[3, 2, 3, 2]]  # xyxy gain
-            t = targets_b * gain                                                                   # t: bs num 7
+            t = targets_b * gain                                                                   # t: 1 num 7
 
             xyxy = (torch.stack((xmin, ymin, xmax, ymax)).T)                                       # xyxy: num 4
             xyxy = xyxy[None, :].repeat((1,1,1))                                                   # xyxy: 1 num 4
-            t = torch.cat((t, xyxy), 2)                                                            # t: bs num 6+4 ???
+            t = torch.cat((t, xyxy), 2)                                                            # t: 1 num 7+4 ???
 
             mask = torch.zeros(t.shape[1], dtype=torch.bool)
             mask[obj_i] = True
             t = t[:, mask]                                                                        # t: bs num_ 10 ??
 
-            t1 = t.view(t.shape[0] * t.shape[1], t.shape[2])                                      # t1: bs*num_, -1
+            t1 = t.view(t.shape[0] * t.shape[1], t.shape[2])                                      # t1: num_, 11
 
             # Offsets
             gxy = t1[:, 2:4]  # grid xy                                                           # bs*num 2
             gxi = gain[[2, 3]] - gxy  # inverse                                                   # j: bs x  | k bs y
             j, k = ((gxy % 1. < g) & (gxy > 1.)).T                                                 
             l, m = ((gxi % 1. < g) & (gxi > 1.)).T                           
-            j = torch.stack((torch.ones_like(j), j, k, l, m, j&k, j&m, l&k, l&m))                 # 9 bs*num 
-            t1 = t1.repeat((9, 1, 1))[j]                                                          # 9 bs*num -1 ->  9 num_ -1
+            j = torch.stack((torch.ones_like(j), j, k, l, m, j&k, j&m, l&k, l&m))                 # 9 num 
+            t1 = t1.repeat((9, 1, 1))[j]                                                          # 9 num -1 ->  9 num -1
             offsets = (torch.zeros_like(gxy)[None] + off[:, None])[j]
 
             ####
