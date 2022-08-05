@@ -1,8 +1,8 @@
 
-from os import fchdir
+
 import torch
 from src.backbone.feature_extractor import deepFeatureExtractor_EfficientNet
-from src.neck.FPN import FPN
+from src.neck.FPN import FPN, Up
 from src.head.det.ObjectBox import Model, C3, Conv
 
 from torchvision.models.resnet import resnet18
@@ -10,14 +10,32 @@ from torchvision.models.resnet import resnet18
 
 from  src.vTrans.FCTransform import Row_block, FCTransform
 
-# model = Row_block(3,18, 64, 64, 32)
-model  = FCTransform((3,128,128), (16,100,30))
+from src.head import Detect
 
-ipnut = torch.randn(1,3,128,128)
-out = model(ipnut)
-print(out.shape)
-out : torch.Tensor
-print(out.is_contiguous())
+from src.loss.ObjectCenter import ComputeLoss
+
+model = torch.nn.Linear(2,3)
+loss = ComputeLoss(model)
+
+
+pre = [torch.randn(3,1,30,30,5+10) for _ in range(2)]
+target = torch.randn(3,6)
+target[:,1] = 1
+target[:,0] = 1
+ls,_ = loss(pre, target)
+print(ls)
+exit()
+
+# ------------------------------------
+
+# model = Row_block(3,18, 64, 64, 32)
+# model  = FCTransform((3,128,128), (16,100,30))
+
+# ipnut = torch.randn(1,3,128,128)
+# out = model(ipnut)
+# print(out.shape)
+# out : torch.Tensor
+# print(out.is_contiguous())
 
 # model = torch.nn.Conv2d(3,9,1,1,0,groups=3)
 # input = torch.randn(1,3,128,128)
@@ -49,16 +67,32 @@ print(out.is_contiguous())
 #     print(i.shape)
 # exit()
 
-# backbone = deepFeatureExtractor_EfficientNet(lv3=True,lv4=True,pretrained=False)
+backbone = deepFeatureExtractor_EfficientNet(lv3=True,lv4=True,pretrained=False)
 # neck = FPN(in_c=[24, 40, 64], out_c=[64, 64])
+neck = Up(104, 128)
+bevTrans = FCTransform((128,128,256), (64, 120, 30))
 
-# input = torch.randn(1,3,512,512)
+trunk = resnet18(pretrained=False, zero_init_residual=True)
+bev_neck = trunk.layer1
 
-# out = backbone(input)
-# for x in out:
-#     print(x.shape)
-# out = neck(out)
-# print(out.shape)
+input = torch.randn(1,3,512,512*2)
+
+out = backbone(input)
+for x in out:
+    print(x.shape)
+out = neck(out[1], out[2])
+print(out.shape)
+print('--------------To BEV-------------')
+bev = bevTrans(out)
+print(bev.shape)
+
+out = bev_neck(bev)
+print(out.shape)
+out = trunk.layer2(out)
+print(out.shape)
+out = trunk.layer3(out)
+print(out.shape)
+
 exit()
 
 
